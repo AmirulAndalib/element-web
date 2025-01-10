@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2020 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -230,12 +230,15 @@ export default class DeviceListener {
     private async getKeyBackupInfo(): Promise<KeyBackupInfo | null> {
         if (!this.client) return null;
         const now = new Date().getTime();
+        const crypto = this.client.getCrypto();
+        if (!crypto) return null;
+
         if (
             !this.keyBackupInfo ||
             !this.keyBackupFetchedAt ||
             this.keyBackupFetchedAt < now - KEY_BACKUP_POLL_INTERVAL
         ) {
-            this.keyBackupInfo = await this.client.getKeyBackupVersion();
+            this.keyBackupInfo = await crypto.getKeyBackupInfo();
             this.keyBackupFetchedAt = now;
         }
         return this.keyBackupInfo;
@@ -292,21 +295,29 @@ export default class DeviceListener {
             await crypto.getUserDeviceInfo([cli.getSafeUserId()]);
 
             // cross signing isn't enabled - nag to enable it
-            // There are 2 different toasts for:
+            // There are 3 different toasts for:
             if (!(await crypto.getCrossSigningKeyId()) && (await crypto.userHasCrossSigningKeys())) {
-                // Cross-signing on account but this device doesn't trust the master key (verify this session)
+                // Toast 1. Cross-signing on account but this device doesn't trust the master key (verify this session)
                 showSetupEncryptionToast(SetupKind.VERIFY_THIS_SESSION);
                 this.checkKeyBackupStatus();
             } else {
-                // No cross-signing or key backup on account (set up encryption)
-                await cli.waitForClientWellKnown();
-                if (isSecureBackupRequired(cli) && isLoggedIn()) {
-                    // If we're meant to set up, and Secure Backup is required,
-                    // trigger the flow directly without a toast once logged in.
-                    hideSetupEncryptionToast();
-                    accessSecretStorage();
+                const backupInfo = await this.getKeyBackupInfo();
+                if (backupInfo) {
+                    // Toast 2: Key backup is enabled but recovery (4S) is not set up: prompt user to set up recovery.
+                    // Since we now enable key backup at registration time, this will be the common case for
+                    // new users.
+                    showSetupEncryptionToast(SetupKind.SET_UP_RECOVERY);
                 } else {
-                    showSetupEncryptionToast(SetupKind.SET_UP_ENCRYPTION);
+                    // Toast 3: No cross-signing or key backup on account (set up encryption)
+                    await cli.waitForClientWellKnown();
+                    if (isSecureBackupRequired(cli) && isLoggedIn()) {
+                        // If we're meant to set up, and Secure Backup is required,
+                        // trigger the flow directly without a toast once logged in.
+                        hideSetupEncryptionToast();
+                        accessSecretStorage();
+                    } else {
+                        showSetupEncryptionToast(SetupKind.SET_UP_ENCRYPTION);
+                    }
                 }
             }
         }

@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2015-2024 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -119,7 +119,6 @@ import { ValidatedServerConfig } from "../../utils/ValidatedServerConfig";
 import { isLocalRoom } from "../../utils/localRoom/isLocalRoom";
 import { SDKContext, SdkContextClass } from "../../contexts/SDKContext";
 import { viewUserDeviceSettings } from "../../actions/handlers/viewUserDeviceSettings";
-import { cleanUpBroadcasts, VoiceBroadcastResumer } from "../../voice-broadcast";
 import GenericToast from "../views/toasts/GenericToast";
 import RovingSpotlightDialog from "../views/dialogs/spotlight/SpotlightDialog";
 import { findDMForUser } from "../../utils/dm/findDMForUser";
@@ -133,6 +132,7 @@ import { SessionLockStolenView } from "./auth/SessionLockStolenView";
 import { ConfirmSessionLockTheftView } from "./auth/ConfirmSessionLockTheftView";
 import { LoginSplashView } from "./auth/LoginSplashView";
 import { cleanUpDraftsIfRequired } from "../../DraftCleaner";
+import { InitialCryptoSetupStore } from "../../stores/InitialCryptoSetupStore";
 
 // legacy export
 export { default as Views } from "../../Views";
@@ -227,7 +227,6 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
     private focusNext: FocusNextType;
     private subTitleStatus: string;
     private prevWindowWidth: number;
-    private voiceBroadcastResumer?: VoiceBroadcastResumer;
 
     private readonly loggedInView = createRef<LoggedInViewType>();
     private dispatcherRef?: string;
@@ -430,6 +429,10 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
             !(await shouldSkipSetupEncryption(cli))
         ) {
             // if cross-signing is not yet set up, do so now if possible.
+            InitialCryptoSetupStore.sharedInstance().startInitialCryptoSetup(
+                cli,
+                this.onCompleteSecurityE2eSetupFinished,
+            );
             this.setStateForNewView({ view: Views.E2E_SETUP });
         } else {
             this.onLoggedIn();
@@ -499,9 +502,6 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         UIStore.destroy();
         this.state.resizeNotifier.removeListener("middlePanelResized", this.dispatchTimelineResize);
         window.removeEventListener("resize", this.onWindowResized);
-
-        this.stores.accountPasswordStore.clearPassword();
-        this.voiceBroadcastResumer?.destroy();
     }
 
     private onWindowResized = (): void => {
@@ -651,10 +651,9 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
                 break;
             case "logout":
                 LegacyCallHandler.instance.hangupAllCalls();
-                Promise.all([
-                    ...[...CallStore.instance.connectedCalls].map((call) => call.disconnect()),
-                    cleanUpBroadcasts(this.stores),
-                ]).finally(() => Lifecycle.logout(this.stores.oidcClientStore));
+                Promise.all([...[...CallStore.instance.connectedCalls].map((call) => call.disconnect())]).finally(() =>
+                    Lifecycle.logout(this.stores.oidcClientStore),
+                );
                 break;
             case "require_registration":
                 startAnyRegistrationFlow(payload as any);
@@ -1638,7 +1637,7 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
             } else {
                 // otherwise check the server to see if there's a new one
                 try {
-                    newVersionInfo = await cli.getKeyBackupVersion();
+                    newVersionInfo = (await cli.getCrypto()?.getKeyBackupInfo()) ?? null;
                     if (newVersionInfo !== null) haveNewVersion = true;
                 } catch (e) {
                     logger.error("Saw key backup error but failed to check backup version!", e);
@@ -1679,8 +1678,6 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
                 });
             }
         });
-
-        this.voiceBroadcastResumer = new VoiceBroadcastResumer(cli);
     }
 
     /**
@@ -1934,8 +1931,8 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         this.showScreen("forgot_password");
     };
 
-    private onRegisterFlowComplete = (credentials: IMatrixClientCreds, password: string): Promise<void> => {
-        return this.onUserCompletedLoginFlow(credentials, password);
+    private onRegisterFlowComplete = (credentials: IMatrixClientCreds): Promise<void> => {
+        return this.onUserCompletedLoginFlow(credentials);
     };
 
     // returns a promise which resolves to the new MatrixClient
@@ -2002,9 +1999,7 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
      * Note: SSO users (and any others using token login) currently do not pass through
      * this, as they instead jump straight into the app after `attemptTokenLogin`.
      */
-    private onUserCompletedLoginFlow = async (credentials: IMatrixClientCreds, password: string): Promise<void> => {
-        this.stores.accountPasswordStore.setPassword(password);
-
+    private onUserCompletedLoginFlow = async (credentials: IMatrixClientCreds): Promise<void> => {
         // Create and start the client
         await Lifecycle.setLoggedIn(credentials);
         await this.postLoginSetup();
@@ -2079,14 +2074,7 @@ export default class MatrixChat extends React.PureComponent<IProps, IState> {
         } else if (this.state.view === Views.COMPLETE_SECURITY) {
             view = <CompleteSecurity onFinished={this.onCompleteSecurityE2eSetupFinished} />;
         } else if (this.state.view === Views.E2E_SETUP) {
-            view = (
-                <E2eSetup
-                    matrixClient={MatrixClientPeg.safeGet()}
-                    onFinished={this.onCompleteSecurityE2eSetupFinished}
-                    accountPassword={this.stores.accountPasswordStore.getPassword()}
-                    tokenLogin={!!this.tokenLogin}
-                />
-            );
+            view = <E2eSetup onFinished={this.onCompleteSecurityE2eSetupFinished} />;
         } else if (this.state.view === Views.LOGGED_IN) {
             // `ready` and `view==LOGGED_IN` may be set before `page_type` (because the
             // latter is set via the dispatcher). If we don't yet have a `page_type`,

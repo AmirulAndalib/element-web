@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2022 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -96,12 +96,12 @@ describe("DeviceListener", () => {
             }),
             getSessionBackupPrivateKey: jest.fn(),
             isEncryptionEnabledInRoom: jest.fn(),
+            getKeyBackupInfo: jest.fn().mockResolvedValue(null),
         } as unknown as Mocked<CryptoApi>;
         mockClient = getMockClientWithEventEmitter({
             isGuest: jest.fn(),
             getUserId: jest.fn().mockReturnValue(userId),
             getSafeUserId: jest.fn().mockReturnValue(userId),
-            getKeyBackupVersion: jest.fn().mockResolvedValue(undefined),
             getRooms: jest.fn().mockReturnValue([]),
             isVersionSupported: jest.fn().mockResolvedValue(true),
             isInitialSyncComplete: jest.fn().mockReturnValue(true),
@@ -352,13 +352,13 @@ describe("DeviceListener", () => {
                     mockCrypto!.getCrossSigningKeyId.mockResolvedValue("abc");
                 });
 
-                it("shows set up encryption toast when user has a key backup available", async () => {
+                it("shows set up recovery toast when user has a key backup available", async () => {
                     // non falsy response
-                    mockClient!.getKeyBackupVersion.mockResolvedValue({} as unknown as KeyBackupInfo);
+                    mockCrypto.getKeyBackupInfo.mockResolvedValue({} as unknown as KeyBackupInfo);
                     await createAndStart();
 
                     expect(SetupEncryptionToast.showToast).toHaveBeenCalledWith(
-                        SetupEncryptionToast.Kind.SET_UP_ENCRYPTION,
+                        SetupEncryptionToast.Kind.SET_UP_RECOVERY,
                     );
                 });
             });
@@ -673,7 +673,7 @@ describe("DeviceListener", () => {
                 describe("When Room Key Backup is not enabled", () => {
                     beforeEach(() => {
                         // no backup
-                        mockClient.getKeyBackupVersion.mockResolvedValue(null);
+                        mockCrypto.getKeyBackupInfo.mockResolvedValue(null);
                     });
 
                     it("Should report recovery state as Enabled", async () => {
@@ -722,7 +722,7 @@ describe("DeviceListener", () => {
                         });
 
                         // no backup
-                        mockClient.getKeyBackupVersion.mockResolvedValue(null);
+                        mockCrypto.getKeyBackupInfo.mockResolvedValue(null);
 
                         await createAndStart();
 
@@ -872,7 +872,7 @@ describe("DeviceListener", () => {
                 describe("When Room Key Backup is enabled", () => {
                     beforeEach(() => {
                         // backup enabled - just need a mock object
-                        mockClient.getKeyBackupVersion.mockResolvedValue({} as KeyBackupInfo);
+                        mockCrypto.getKeyBackupInfo.mockResolvedValue({} as KeyBackupInfo);
                     });
 
                     const testCases = [

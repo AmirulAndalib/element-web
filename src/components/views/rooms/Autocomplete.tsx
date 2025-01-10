@@ -2,7 +2,7 @@
 Copyright 2017-2024 New Vector Ltd.
 Copyright 2016 Aviral Dasgupta
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -49,7 +49,7 @@ export default class Autocomplete extends React.PureComponent<IProps, IState> {
     private completionRefs: Record<string, RefObject<HTMLElement>> = {};
 
     public static contextType = RoomContext;
-    public declare context: React.ContextType<typeof RoomContext>;
+    declare public context: React.ContextType<typeof RoomContext>;
 
     public constructor(props: IProps, context: React.ContextType<typeof RoomContext>) {
         super(props, context);
