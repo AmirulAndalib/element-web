@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2019-2021 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -819,7 +819,11 @@ export default class EventIndex extends EventEmitter {
         // Add the events to the timeline of the file panel.
         matrixEvents.forEach((e) => {
             if (!timelineSet.eventIdToTimeline(e.getId()!)) {
-                timelineSet.addEventToTimeline(e, timeline, direction == EventTimeline.BACKWARDS);
+                timelineSet.addEventToTimeline(e, timeline, {
+                    toStartOfTimeline: direction == EventTimeline.BACKWARDS,
+                    fromCache: false,
+                    addToState: false,
+                });
             }
         });
 

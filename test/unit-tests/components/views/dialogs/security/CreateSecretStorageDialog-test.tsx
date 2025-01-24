@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2023 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -77,7 +77,7 @@ describe("CreateSecretStorageDialog", () => {
         filterConsole("Error fetching backup data from server");
 
         it("shows an error", async () => {
-            mockClient.getKeyBackupVersion.mockImplementation(async () => {
+            jest.spyOn(mockClient.getCrypto()!, "getKeyBackupInfo").mockImplementation(async () => {
                 throw new Error("bleh bleh");
             });
 
@@ -92,7 +92,7 @@ describe("CreateSecretStorageDialog", () => {
             expect(result.container).toMatchSnapshot();
 
             // Now we can get the backup and we retry
-            mockClient.getKeyBackupVersion.mockRestore();
+            jest.spyOn(mockClient.getCrypto()!, "getKeyBackupInfo").mockRestore();
             await userEvent.click(screen.getByRole("button", { name: "Retry" }));
             await screen.findByText("Your keys are now being backed up from this device.");
         });

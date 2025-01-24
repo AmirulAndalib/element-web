@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2019-2021 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -11,7 +11,6 @@ import {
     AutoDiscovery,
     AutoDiscoveryError,
     ClientConfig,
-    discoverAndValidateOIDCIssuerWellKnown,
     IClientWellKnown,
     MatrixClient,
     MatrixError,
@@ -293,8 +292,7 @@ export default class AutoDiscoveryUtils {
         let delegatedAuthenticationError: Error | undefined;
         try {
             const tempClient = new MatrixClient({ baseUrl: preferredHomeserverUrl });
-            const { issuer } = await tempClient.getAuthIssuer();
-            delegatedAuthentication = await discoverAndValidateOIDCIssuerWellKnown(issuer);
+            delegatedAuthentication = await tempClient.getAuthMetadata();
         } catch (e) {
             if (e instanceof MatrixError && e.httpStatus === 404 && e.errcode === "M_UNRECOGNIZED") {
                 // 404 M_UNRECOGNIZED means the server does not support OIDC

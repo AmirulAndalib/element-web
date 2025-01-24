@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2022 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -18,7 +18,7 @@ import {
     ContentHelpers,
     M_BEACON,
 } from "matrix-js-sdk/src/matrix";
-import { randomString } from "matrix-js-sdk/src/randomstring";
+import { secureRandomString } from "matrix-js-sdk/src/randomstring";
 import classNames from "classnames";
 
 import MatrixClientContext from "../../../contexts/MatrixClientContext";
@@ -81,10 +81,10 @@ const useBeaconState = (
 // eg thread and main timeline, reply
 // maplibregl needs a unique id to attach the map instance to
 const useUniqueId = (eventId: string): string => {
-    const [id, setId] = useState(`${eventId}_${randomString(8)}`);
+    const [id, setId] = useState(`${eventId}_${secureRandomString(8)}`);
 
     useEffect(() => {
-        setId(`${eventId}_${randomString(8)}`);
+        setId(`${eventId}_${secureRandomString(8)}`);
     }, [eventId]);
 
     return id;

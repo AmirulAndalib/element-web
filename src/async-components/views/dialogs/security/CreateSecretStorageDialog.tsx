@@ -3,7 +3,7 @@ Copyright 2024 New Vector Ltd.
 Copyright 2019, 2020 , 2023 The Matrix.org Foundation C.I.C.
 Copyright 2018, 2019 New Vector Ltd
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -279,7 +279,7 @@ export default class CreateSecretStorageDialog extends React.PureComponent<IProp
         if (!forceReset) {
             try {
                 this.setState({ phase: Phase.Loading });
-                backupInfo = await cli.getKeyBackupVersion();
+                backupInfo = await crypto.getKeyBackupInfo();
             } catch (e) {
                 logger.error("Error fetching backup data from server", e);
                 this.setState({ phase: Phase.LoadError });

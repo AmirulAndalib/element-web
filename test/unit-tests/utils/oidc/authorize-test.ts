@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2023 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -49,7 +49,7 @@ describe("OIDC authorization", () => {
             origin: baseUrl,
         };
 
-        jest.spyOn(randomStringUtils, "randomString").mockRestore();
+        jest.spyOn(randomStringUtils, "secureRandomString").mockRestore();
         mockPlatformPeg();
         Object.defineProperty(window, "crypto", {
             value: {
@@ -61,10 +61,7 @@ describe("OIDC authorization", () => {
     });
 
     beforeAll(() => {
-        fetchMock.get(
-            `${delegatedAuthConfig.metadata.issuer}.well-known/openid-configuration`,
-            delegatedAuthConfig.metadata,
-        );
+        fetchMock.get(`${delegatedAuthConfig.issuer}.well-known/openid-configuration`, delegatedAuthConfig);
     });
 
     afterAll(() => {

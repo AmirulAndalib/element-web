@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2023 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -158,7 +158,7 @@ describe("RoomHeader", () => {
 
         fireEvent.click(facePile);
 
-        expect(setCardSpy).toHaveBeenCalledWith({ phase: RightPanelPhases.RoomMemberList });
+        expect(setCardSpy).toHaveBeenCalledWith({ phase: RightPanelPhases.MemberList });
     });
 
     it("has room info icon that opens the room info panel", async () => {
@@ -176,7 +176,7 @@ describe("RoomHeader", () => {
     });
 
     it("opens the notifications panel", async () => {
-        jest.spyOn(SettingsStore, "getValue").mockImplementation((name: string) => {
+        jest.spyOn(SettingsStore, "getValue").mockImplementation((name: string): any => {
             if (name === "feature_notifications") return true;
         });
 
@@ -589,7 +589,7 @@ describe("RoomHeader", () => {
                 state_key: "",
                 room_id: room.roomId,
             });
-            room.addLiveEvents([joinRuleEvent]);
+            room.addLiveEvents([joinRuleEvent], { addToState: true });
 
             render(<RoomHeader room={room} />, getWrapper());
 

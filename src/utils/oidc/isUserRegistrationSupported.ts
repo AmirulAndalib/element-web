@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2023 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -15,8 +15,6 @@ import { OidcClientConfig } from "matrix-js-sdk/src/matrix";
  * @returns whether user registration is supported
  */
 export const isUserRegistrationSupported = (delegatedAuthConfig: OidcClientConfig): boolean => {
-    // The OidcMetadata type from oidc-client-ts does not include `prompt_values_supported`
-    // even though it is part of the OIDC spec, so cheat TS here to access it
-    const supportedPrompts = (delegatedAuthConfig.metadata as Record<string, unknown>)["prompt_values_supported"];
+    const supportedPrompts = delegatedAuthConfig.prompt_values_supported;
     return Array.isArray(supportedPrompts) && supportedPrompts?.includes("create");
 };

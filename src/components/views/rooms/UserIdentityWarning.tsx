@@ -1,11 +1,11 @@
 /*
 Copyright 2024 New Vector Ltd.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { EventType, KnownMembership, MatrixEvent, Room, RoomStateEvent, RoomMember } from "matrix-js-sdk/src/matrix";
 import { CryptoApi, CryptoEvent, UserVerificationStatus } from "matrix-js-sdk/src/crypto-api";
 import { logger } from "matrix-js-sdk/src/logger";
@@ -103,12 +103,17 @@ export const UserIdentityWarning: React.FC<UserIdentityWarningProps> = ({ room }
             if (currentPrompt && membersNeedingApproval.has(currentPrompt.userId)) return currentPrompt;
 
             if (membersNeedingApproval.size === 0) {
+                if (currentPrompt) {
+                    // If we were previously showing a warning, log that we've stopped doing so.
+                    logger.debug("UserIdentityWarning: no users left that need approval");
+                }
                 return undefined;
             }
 
             // We pick the user with the smallest user ID.
             const keys = Array.from(membersNeedingApproval.keys()).sort((a, b) => a.localeCompare(b));
             const selection = membersNeedingApproval.get(keys[0]!);
+            logger.debug(`UserIdentityWarning: now warning about user ${selection?.userId}`);
             return selection;
         });
     }, []);
@@ -132,6 +137,9 @@ export const UserIdentityWarning: React.FC<UserIdentityWarningProps> = ({ room }
             // initialising, and we want to start by displaying a warning
             // for the user with the smallest ID.
             if (initialisedRef.current === InitialisationStatus.Completed) {
+                logger.debug(
+                    `UserIdentityWarning: user ${userId} now needs approval; approval-pending list now [${Array.from(membersNeedingApprovalRef.current.keys())}]`,
+                );
                 updateCurrentPrompt();
             }
         },
@@ -173,6 +181,9 @@ export const UserIdentityWarning: React.FC<UserIdentityWarningProps> = ({ room }
     const removeMemberNeedingApproval = useCallback(
         (userId: string): void => {
             membersNeedingApprovalRef.current.delete(userId);
+            logger.debug(
+                `UserIdentityWarning: user ${userId} no longer needs approval; approval-pending list now [${Array.from(membersNeedingApprovalRef.current.keys())}]`,
+            );
             updateCurrentPrompt();
         },
         [updateCurrentPrompt],
@@ -195,13 +206,18 @@ export const UserIdentityWarning: React.FC<UserIdentityWarningProps> = ({ room }
         const members = await room.getEncryptionTargetMembers();
         await addMembersWhoNeedApproval(members);
 
+        logger.info(
+            `Initialised UserIdentityWarning component for room ${room.roomId} with approval-pending list [${Array.from(membersNeedingApprovalRef.current.keys())}]`,
+        );
         updateCurrentPrompt();
         initialisedRef.current = InitialisationStatus.Completed;
     }, [crypto, room, addMembersWhoNeedApproval, updateCurrentPrompt]);
 
-    loadMembers().catch((e) => {
-        logger.error("Error initialising UserIdentityWarning:", e);
-    });
+    useEffect(() => {
+        loadMembers().catch((e) => {
+            logger.error("Error initialising UserIdentityWarning:", e);
+        });
+    }, [loadMembers]);
 
     // When a user's verification status changes, we check if they need to be
     // added/removed from the set of members needing approval.

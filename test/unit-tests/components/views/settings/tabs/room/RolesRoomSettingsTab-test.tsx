@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2022 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -17,7 +17,6 @@ import userEvent from "@testing-library/user-event";
 import RolesRoomSettingsTab from "../../../../../../../src/components/views/settings/tabs/room/RolesRoomSettingsTab";
 import { mkStubRoom, withClientContextRenderOptions, stubClient } from "../../../../../../test-utils";
 import { MatrixClientPeg } from "../../../../../../../src/MatrixClientPeg";
-import { VoiceBroadcastInfoEventType } from "../../../../../../../src/voice-broadcast";
 import SettingsStore from "../../../../../../../src/settings/SettingsStore";
 import { ElementCall } from "../../../../../../../src/models/Call";
 
@@ -32,14 +31,6 @@ describe("RolesRoomSettingsTab", () => {
         // Wait for the tab to be ready
         await waitFor(() => expect(screen.getByText("Permissions")).toBeInTheDocument());
         return renderResult;
-    };
-
-    const getVoiceBroadcastsSelect = async (): Promise<Element> => {
-        return (await renderTab()).container.querySelector("select[label='Voice broadcasts']")!;
-    };
-
-    const getVoiceBroadcastsSelectedOption = async (): Promise<Element> => {
-        return (await renderTab()).container.querySelector("select[label='Voice broadcasts'] option:checked")!;
     };
 
     beforeEach(() => {
@@ -76,29 +67,9 @@ describe("RolesRoomSettingsTab", () => {
         expect(container.querySelector(`[placeholder="@admin:server"]`)).toBeDisabled();
     });
 
-    it("should initially show »Moderator« permission for »Voice broadcasts«", async () => {
-        expect((await getVoiceBroadcastsSelectedOption()).textContent).toBe("Moderator");
-    });
-
-    describe("when setting »Default« permission for »Voice broadcasts«", () => {
-        beforeEach(async () => {
-            fireEvent.change(await getVoiceBroadcastsSelect(), {
-                target: { value: 0 },
-            });
-        });
-
-        it("should update the power levels", () => {
-            expect(cli.sendStateEvent).toHaveBeenCalledWith(roomId, EventType.RoomPowerLevels, {
-                events: {
-                    [VoiceBroadcastInfoEventType]: 0,
-                },
-            });
-        });
-    });
-
     describe("Element Call", () => {
         const setGroupCallsEnabled = (val: boolean): void => {
-            jest.spyOn(SettingsStore, "getValue").mockImplementation((name: string) => {
+            jest.spyOn(SettingsStore, "getValue").mockImplementation((name: string): any => {
                 if (name === "feature_group_calls") return val;
             });
         };

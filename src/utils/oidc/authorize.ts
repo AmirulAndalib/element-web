@@ -2,14 +2,14 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2023 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
 import { completeAuthorizationCodeGrant, generateOidcAuthorizationUrl } from "matrix-js-sdk/src/oidc/authorize";
 import { QueryDict } from "matrix-js-sdk/src/utils";
 import { OidcClientConfig } from "matrix-js-sdk/src/matrix";
-import { randomString } from "matrix-js-sdk/src/randomstring";
+import { secureRandomString } from "matrix-js-sdk/src/randomstring";
 import { IdTokenClaims } from "oidc-client-ts";
 
 import { OidcClientError } from "./error";
@@ -34,12 +34,12 @@ export const startOidcLogin = async (
 ): Promise<void> => {
     const redirectUri = PlatformPeg.get()!.getOidcCallbackUrl().href;
 
-    const nonce = randomString(10);
+    const nonce = secureRandomString(10);
 
     const prompt = isRegistration ? "create" : undefined;
 
     const authorizationUrl = await generateOidcAuthorizationUrl({
-        metadata: delegatedAuthConfig.metadata,
+        metadata: delegatedAuthConfig,
         redirectUri,
         clientId,
         homeserverUrl,
