@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2022 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -18,7 +18,7 @@ import {
 } from "matrix-js-sdk/src/matrix";
 import { KnownMembership, Membership } from "matrix-js-sdk/src/types";
 import { logger } from "matrix-js-sdk/src/logger";
-import { randomString } from "matrix-js-sdk/src/randomstring";
+import { secureRandomString } from "matrix-js-sdk/src/randomstring";
 import { CallType } from "matrix-js-sdk/src/webrtc/call";
 import { NamespacedValue } from "matrix-js-sdk/src/NamespacedValue";
 import { IWidgetApiRequest } from "matrix-widget-api";
@@ -688,7 +688,7 @@ export class ElementCall extends Call {
 
         // Set custom fonts
         if (SettingsStore.getValue("useSystemFont")) {
-            SettingsStore.getValue<string>("systemFont")
+            SettingsStore.getValue("systemFont")
                 .split(",")
                 .map((font) => {
                     // Strip whitespace and quotes
@@ -743,7 +743,7 @@ export class ElementCall extends Call {
         const url = ElementCall.generateWidgetUrl(client, roomId);
         return WidgetStore.instance.addVirtualWidget(
             {
-                id: randomString(24), // So that it's globally unique
+                id: secureRandomString(24), // So that it's globally unique
                 creatorUserId: client.getUserId()!,
                 name: "Element Call",
                 type: WidgetType.CALL.preferred,

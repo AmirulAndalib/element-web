@@ -2,7 +2,7 @@
 Copyright 2024 New Vector Ltd.
 Copyright 2022 The Matrix.org Foundation C.I.C.
 
-SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only
+SPDX-License-Identifier: AGPL-3.0-only OR GPL-3.0-only OR LicenseRef-Element-Commercial
 Please see LICENSE files in the repository root for full details.
 */
 
@@ -57,7 +57,7 @@ import SettingsStore from "../../../../../../../src/settings/SettingsStore";
 import { getClientInformationEventType } from "../../../../../../../src/utils/device/clientInformation";
 import { SDKContext, SdkContextClass } from "../../../../../../../src/contexts/SDKContext";
 import { OidcClientStore } from "../../../../../../../src/stores/oidc/OidcClientStore";
-import { mockOpenIdConfiguration } from "../../../../../../test-utils/oidc";
+import { makeDelegatedAuthConfig } from "../../../../../../test-utils/oidc";
 import MatrixClientContext from "../../../../../../../src/contexts/MatrixClientContext";
 
 mockPlatformPeg();
@@ -215,7 +215,7 @@ describe("<SessionManagerTab />", () => {
             getPushers: jest.fn(),
             setPusher: jest.fn(),
             setLocalNotificationSettings: jest.fn(),
-            getAuthIssuer: jest.fn().mockReturnValue(new Promise(() => {})),
+            getAuthMetadata: jest.fn().mockRejectedValue(new MatrixError({ errcode: "M_UNRECOGNIZED" }, 404)),
         });
         jest.clearAllMocks();
         jest.spyOn(logger, "error").mockRestore();
@@ -1234,34 +1234,13 @@ describe("<SessionManagerTab />", () => {
                     toggleDeviceDetails(getByTestId, alicesMobileDevice.device_id);
 
                     const deviceDetails = getByTestId(`device-detail-${alicesMobileDevice.device_id}`);
-                    const signOutButton = deviceDetails.querySelector(
+                    const manageDeviceButton = deviceDetails.querySelector(
                         '[data-testid="device-detail-sign-out-cta"]',
                     ) as Element;
-                    fireEvent.click(signOutButton);
-
-                    await screen.findByRole("dialog");
-                    expect(
-                        screen.getByText(
-                            "You will be redirected to your server's authentication provider to complete sign out.",
-                        ),
-                    ).toBeInTheDocument();
-                    // correct link to auth provider
-                    expect(screen.getByText("Continue")).toHaveAttribute(
+                    expect(manageDeviceButton).toHaveAttribute(
                         "href",
-                        `https://issuer.org/account?action=session_end&device_id=${alicesMobileDevice.device_id}`,
+                        `https://issuer.org/account?action=org.matrix.session_view&device_id=${alicesMobileDevice.device_id}`,
                     );
-
-                    // go to the link
-                    fireEvent.click(screen.getByText("Continue"));
-                    await flushPromises();
-
-                    // come back from the link and close the modal
-                    fireEvent.click(screen.getByText("Close"));
-
-                    await flushPromises();
-
-                    // devices were refreshed
-                    expect(mockClient.getDevices).toHaveBeenCalled();
                 });
 
                 it("does not allow removing multiple devices at once", async () => {
@@ -1636,7 +1615,6 @@ describe("<SessionManagerTab />", () => {
     describe("MSC4108 QR code login", () => {
         const settingsValueSpy = jest.spyOn(SettingsStore, "getValue");
         const issuer = "https://issuer.org";
-        const openIdConfiguration = mockOpenIdConfiguration(issuer);
 
         beforeEach(() => {
             settingsValueSpy.mockClear().mockReturnValue(true);
@@ -1652,16 +1630,16 @@ describe("<SessionManagerTab />", () => {
                     enabled: true,
                 },
             });
-            mockClient.getAuthIssuer.mockResolvedValue({ issuer });
-            mockCrypto.exportSecretsBundle = jest.fn();
-            fetchMock.mock(`${issuer}/.well-known/openid-configuration`, {
-                ...openIdConfiguration,
+            const delegatedAuthConfig = makeDelegatedAuthConfig(issuer);
+            mockClient.getAuthMetadata.mockResolvedValue({
+                ...delegatedAuthConfig,
                 grant_types_supported: [
-                    ...openIdConfiguration.grant_types_supported,
+                    ...delegatedAuthConfig.grant_types_supported,
                     "urn:ietf:params:oauth:grant-type:device_code",
                 ],
             });
-            fetchMock.mock(openIdConfiguration.jwks_uri!, {
+            mockCrypto.exportSecretsBundle = jest.fn();
+            fetchMock.mock(delegatedAuthConfig.jwks_uri!, {
                 status: 200,
                 headers: {
                     "Content-Type": "application/json",
